@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Declares which device-admin capabilities this app uses.
+  We only need enough to (a) lock the screen remotely and
+  (b) make plain "uninstall from Settings" require the user
+  to first deactivate admin (an extra step that discourages
+  a casual thief). This is a regular Device Admin, NOT a
+  Device Owner — it cannot block a hardware-button factory
+  reset, only add friction to normal in-Settings removal.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <limit-password />
+        <force-lock />
+        <watch-login />
+    </uses-policies>
+</device-admin>

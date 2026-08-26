@@ -1,0 +1,53 @@
+@baseUrl = http://localhost:5000
+
+### 1. Register a new account (password = portal login, pin = device unlock code)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "SuperSecret123",
+  "pin": "482913"
+}
+
+### 2. Log in (copy the "token" from the response into @token below)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "SuperSecret123"
+}
+
+### 3. Register a "device" (in Week 2 the MAUI app will call this for real;
+###    for now, paste in any dummy string as the FCM token to test the flow)
+@token = PASTE_TOKEN_FROM_STEP_2_HERE
+
+POST {{baseUrl}}/api/devices/register
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "deviceName": "Test Phone",
+  "fcmToken": "dummy-token-for-now",
+  "platform": "Android"
+}
+
+### 4. List my devices (copy a device "id" from the response into step 5)
+GET {{baseUrl}}/api/devices
+Authorization: Bearer {{token}}
+
+### 5. Trigger the alarm remotely (this is the core feature!)
+###    NOTE: this will fail with a 502 until you (a) set up real Firebase
+###    credentials and (b) register a device with a REAL FCM token from
+###    the Week 2 mobile app. That's expected for now — a 502 here means
+###    everything except Firebase delivery is wired correctly.
+@deviceId = PASTE_DEVICE_ID_FROM_STEP_4_HERE
+
+POST {{baseUrl}}/api/devices/{{deviceId}}/commands
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "type": "SoundAlarm"
+}

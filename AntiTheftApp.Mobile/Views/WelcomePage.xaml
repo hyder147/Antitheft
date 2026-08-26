@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="AntiTheftApp.Mobile.Views.WelcomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Welcome"
+    Shell.NavBarIsVisible="False">
+
+    <VerticalStackLayout Padding="32" Spacing="24" VerticalOptions="Center">
+
+        <Label Text="&#128737;" FontSize="80" HorizontalOptions="Center" />
+        <Label Text="AntiTheftApp" FontSize="30" FontAttributes="Bold" HorizontalOptions="Center" />
+        <Label
+            Text="This app protects your phone. If it's ever lost or stolen, you can remotely trigger a loud alarm and locate it from any other device."
+            FontSize="15"
+            TextColor="Gray"
+            HorizontalTextAlignment="Center" />
+
+        <Button Text="Enable Protection" Clicked="OnEnableProtectionClicked" HeightRequest="52" />
+
+        <Label
+            Text="You'll be asked to log in or create an account next."
+            FontSize="12"
+            TextColor="Gray"
+            HorizontalOptions="Center" />
+
+    </VerticalStackLayout>
+
+</ContentPage>

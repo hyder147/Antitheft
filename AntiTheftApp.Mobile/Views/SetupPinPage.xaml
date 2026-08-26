@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="AntiTheftApp.Mobile.Views.SetupPinPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Set unlock PIN">
+
+    <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+        <Label Text="Set a PIN for this device" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" />
+        <Label
+            Text="This PIN silences the alarm on THIS phone. It works even with no internet connection, so choose something you'll remember."
+            FontSize="13"
+            TextColor="Gray"
+            HorizontalTextAlignment="Center" />
+
+        <Entry x:Name="PinEntry" Placeholder="Enter a PIN (4-8 digits)" Keyboard="Numeric" MaxLength="8" IsPassword="True" />
+        <Entry x:Name="ConfirmPinEntry" Placeholder="Confirm PIN" Keyboard="Numeric" MaxLength="8" IsPassword="True" />
+
+        <Button Text="Save PIN and Continue" Clicked="OnSaveClicked" />
+        <Label x:Name="ErrorLabel" TextColor="Red" IsVisible="False" />
+    </VerticalStackLayout>
+
+</ContentPage>

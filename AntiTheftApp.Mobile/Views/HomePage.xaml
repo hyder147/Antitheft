@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="AntiTheftApp.Mobile.Views.HomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="AntiTheftApp"
+    Shell.NavBarIsVisible="False">
+
+    <VerticalStackLayout Padding="24" Spacing="20" VerticalOptions="Center">
+
+        <Label Text="&#128737;" FontSize="64" HorizontalOptions="Center" />
+        <Label Text="Protection Active" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" TextColor="Green" />
+        <Label
+            Text="This device will sound a loud alarm if you trigger it remotely from the web portal."
+            FontSize="14"
+            HorizontalOptions="Center"
+            HorizontalTextAlignment="Center"
+            TextColor="Gray" />
+
+        <BoxView HeightRequest="1" Color="LightGray" Margin="0,20" />
+
+        <Label Text="Recommended setup:" FontSize="13" TextColor="Gray" />
+        <Button Text="Enable Device Admin Protection" Clicked="OnEnableDeviceAdminClicked" BackgroundColor="#1565C0" TextColor="White" />
+        <Label
+            Text="Makes the app resist being uninstalled or force-stopped, and lets the app resume the lock screen if the phone reboots while armed. On some phones (Xiaomi, Huawei, Oppo) you'll also need to allow 'Autostart' for this app in battery settings."
+            FontSize="11"
+            TextColor="Gray"
+            HorizontalTextAlignment="Center" />
+
+        <BoxView HeightRequest="1" Color="LightGray" Margin="0,20" />
+
+        <Label Text="Local test (no internet needed):" FontSize="13" TextColor="Gray" />
+        <Button Text="Test Alarm Now" Clicked="OnTestAlarmClicked" BackgroundColor="OrangeRed" TextColor="White" />
+        <Button Text="Stop Test Alarm" Clicked="OnStopTestAlarmClicked" BackgroundColor="Transparent" TextColor="OrangeRed" />
+
+        <Label
+            Text="(A REMOTE trigger shows a full lock screen with a PIN prompt instead — this local button just verifies the siren works.)"
+            FontSize="11"
+            TextColor="Gray"
+            HorizontalTextAlignment="Center" />
+
+        <Button Text="Log Out" Clicked="OnLogoutClicked" BackgroundColor="Transparent" TextColor="Gray" />
+
+    </VerticalStackLayout>
+
+</ContentPage>
