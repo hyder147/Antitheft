@@ -150,3 +150,27 @@ dotnet ef database update
 - **OEM battery managers can still kill it.** On Xiaomi (MIUI), Huawei, Oppo, and some other
   OEM skins, the user also needs to manually allow "Autostart" for the app in that phone's
   battery/security settings, or `BOOT_COMPLETED` may never fire. No code fix exists for this.
+
+## Automated tests
+
+The API has an xUnit test project: `AntiTheftApp.Api.Tests/`.
+
+- **Unit tests** — `AuthController`, `DevicesController` and `JwtService` (registration, login, invalid
+  credentials, device ownership, Firebase failure handling, JWT contents/expiry).
+- **Integration tests** — boot the real ASP.NET pipeline with `WebApplicationFactory` (validation,
+  JWT auth, routing). PostgreSQL is swapped for an in-memory DB and Firebase for a mock, so no Docker,
+  database or real credentials are needed.
+
+```bash
+dotnet test AntiTheftApp.sln
+```
+
+## CI (GitHub Actions)
+
+`.github/workflows/ci.yml` runs on every push to `main`/`master` and on pull requests:
+
+1. **api** — `dotnet restore`, `build` and `test` (test results uploaded as an artifact)
+2. **portal** — `npm ci` and `npm run build` for the React portal
+3. **docker** — verifies the API Docker image builds
+
+Tests use dummy keys only; no secrets are required in GitHub.

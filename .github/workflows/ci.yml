@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Cancel older runs of the same branch/PR when a new commit arrives.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API - build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore AntiTheftApp.sln
+
+      - name: Build
+        run: dotnet build AntiTheftApp.sln --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test AntiTheftApp.sln
+          --configuration Release --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: TestResults/**
+          if-no-files-found: ignore
+
+  portal:
+    name: Portal - build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AntiTheftApp-Portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: AntiTheftApp-Portal/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+
+  docker:
+    name: API - Docker image builds
+    runs-on: ubuntu-latest
+    needs: api
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (not pushed)
+        run: docker build -f AntiTheftApp.Api/dockerfile -t antitheftapp-api:ci AntiTheftApp.Api
