@@ -1,5 +1,7 @@
 # AntiTheftApp — Week 1: Backend Foundation
 
+[![CI](https://github.com/hyder147/Antitheft/actions/workflows/ci.yml/badge.svg)](https://github.com/hyder147/Antitheft/actions/workflows/ci.yml)
+
 What's in this folder maps directly to Week 1 of the roadmap: Firebase + Postgres
 set up, EF Core models, auth (register/login/JWT), and a working FCM push send.
 No mobile app yet — that's Week 2.
