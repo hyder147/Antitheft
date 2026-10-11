@@ -1,178 +1,124 @@
-# AntiTheftApp — Week 1: Backend Foundation
+# AntiTheftApp
 
 [![CI](https://github.com/hyder147/Antitheft/actions/workflows/ci.yml/badge.svg)](https://github.com/hyder147/Antitheft/actions/workflows/ci.yml)
 
-What's in this folder maps directly to Week 1 of the roadmap: Firebase + Postgres
-set up, EF Core models, auth (register/login/JWT), and a working FCM push send.
-No mobile app yet — that's Week 2.
+If your phone gets lost or stolen, you log into a web page from any other device, press a button, and the phone starts blaring an alarm. That is the whole idea behind this project.
 
-## What you're getting
+I built it to practice backend development in .NET end to end: an API, a database, authentication, push notifications, a web client, a mobile client, tests and CI. It is a learning project, not a finished product, so I have tried to be honest below about what works and what does not.
 
-```
-AntiTheftApp/
-├── AntiTheftApp.sln
-├── docker-compose.yml              ← local Postgres, no install needed
-├── .gitignore
-└── AntiTheftApp.Api/
-    ├── AntiTheftApp.Api.csproj
-    ├── Program.cs                  ← wires up DB, JWT auth, Firebase, Swagger
-    ├── appsettings.json            ← config (placeholders — you'll edit this)
-    ├── appsettings.Development.json
-    ├── firebase-service-account.json.example
-    ├── AntiTheftApp.Api.http       ← ready-made test requests
-    ├── Models/                     ← User, Device, Command
-    ├── Data/                       ← EF Core DbContext
-    ├── DTOs/                       ← request/response shapes
-    ├── Services/                   ← JWT issuing, Firebase push sending
-    └── Controllers/                ← AuthController, DevicesController
-```
+## What's in the repo
 
-## Prerequisites
+- `AntiTheftApp.Api/` is the backend: ASP.NET Core 8, Entity Framework Core, PostgreSQL, JWT login and Firebase Cloud Messaging.
+- `AntiTheftApp.Api.Tests/` holds the xUnit tests for the API.
+- `AntiTheftApp-Portal/` is the React (Vite) web portal where the owner logs in and triggers the alarm.
+- `AntiTheftApp.Mobile/` is the .NET MAUI Android app that receives the command and plays the alarm.
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for Postgres — or install Postgres natively if you prefer)
-- A free [Firebase](https://console.firebase.google.com/) account
+## How it works
 
-## Setup steps (do these in order)
+1. You register with an email, a password and a short PIN. The password is for logging into the portal. The PIN is what you type on the phone itself to silence the alarm.
+2. When you log in on the phone, the app sends its Firebase token to the API so the backend knows how to reach it.
+3. In the portal you pick a device and press **Sound Alarm**.
+4. The API first checks that the device really belongs to you, saves the command in the database (so there is a history of who triggered what and when), then sends a push message through Firebase.
+5. The phone wakes up and a foreground service starts the alarm. There is also a boot receiver and Device Admin protection to make it harder to simply restart or uninstall the app.
 
-### 1. Start Postgres
-```bash
-docker compose up -d
-```
-This spins up Postgres on `localhost:5432` with database `antitheftapp`.
+## The API
 
-**Before running this**, open `docker-compose.yml` and `AntiTheftApp.Api/appsettings.json`
-and change `CHANGE_ME` to the same real password in **both** files — they need to match.
+| Method | Route | Needs login | What it does |
+|--------|-------|-------------|--------------|
+| POST | `/api/auth/register` | No | Creates an account and returns a token |
+| POST | `/api/auth/login` | No | Logs in and returns a token |
+| POST | `/api/devices/register` | Yes | Saves a phone and its Firebase token |
+| GET | `/api/devices` | Yes | Lists your devices |
+| POST | `/api/devices/{id}/commands` | Yes | Sends a command to one of your devices |
+| POST | `/api/devices/{id}/security-event` | Yes | Lets the phone report something suspicious |
 
-### 2. Create your Firebase project
-1. Go to the [Firebase Console](https://console.firebase.google.com/) → **Add project**.
-2. Once created, go to **Project Settings (gear icon) → Cloud Messaging** and confirm the
-   Firebase Cloud Messaging API is enabled (it is by default on new projects).
-3. Go to **Project Settings → Service Accounts → Generate New Private Key**. This downloads
-   a JSON file.
-4. Rename that downloaded file to `firebase-service-account.json` and place it directly in
-   `AntiTheftApp.Api/` (next to `Program.cs`). It's already gitignored, so it's safe there.
+A few details I paid attention to:
 
-   *(`firebase-service-account.json.example` in this folder shows you the expected shape —
-   don't use it directly, it has fake values.)*
+- Passwords and PINs are hashed with BCrypt.
+- Every device endpoint filters by the logged-in user, so nobody can trigger an alarm on someone else's phone just by guessing an ID.
+- Login gives the same error for a wrong password and an unknown email, so it does not reveal which accounts exist.
+- If Firebase fails to deliver, the real error goes to the server log only. The client just gets a generic message.
 
-### 3. Set a real JWT signing key
-In `appsettings.json`, replace `Jwt:Key` with any random 32+ character string. Quick way to
-generate one:
-```bash
-openssl rand -base64 32
-```
+## Tests and CI
 
-### 4. Restore packages and build
-```bash
-cd AntiTheftApp.Api
-dotnet restore
-dotnet build
-```
-If this is your first time — `dotnet restore` needs internet access to NuGet.org to download
-the packages listed in the `.csproj` (EF Core, JWT auth, BCrypt, FirebaseAdmin, Swagger).
-
-### 5. Create the database schema
-```bash
-dotnet tool install --global dotnet-ef   # first time only
-dotnet ef migrations add InitialCreate
-dotnet ef database update
-```
-This reads your three models (`User`, `Device`, `Command`) and creates matching tables in
-Postgres.
-
-### 6. Run it
-```bash
-dotnet run
-```
-Swagger UI opens automatically (or visit `https://localhost:7001/swagger`) — you can test
-every endpoint from the browser, or open `AntiTheftApp.Api.http` in VS Code (with the
-**REST Client** extension) and click "Send Request" above each numbered request.
-
-## What "done" looks like for Week 1
-
-- [ ] `POST /api/auth/register` creates a user and returns a JWT
-- [ ] `POST /api/auth/login` returns a JWT for existing credentials
-- [ ] `POST /api/devices/register` (with a valid JWT) creates a device row
-- [ ] `GET /api/devices` lists it back
-- [ ] `POST /api/devices/{id}/commands` attempts an FCM push — **it's fine if this
-      returns a 502** right now, since there's no real phone with a real FCM token yet.
-      A 502 here specifically means "everything is wired correctly, delivery just failed,"
-      which is exactly what Week 2 (the mobile app) will fix by producing a real token.
-
-## A note on why some choices were made
-
-- **Data-only FCM message, not a "notification" message** — this lets the mobile app's own
-  code decide what happens on receipt (start the alarm service) instead of Android showing
-  a generic tray notification first, which a thief could just swipe away.
-- **PIN is separate from the login password** — the password logs you into the *portal* on a
-  second device; the PIN is what's typed *on the lost phone itself* to silence the alarm.
-  Keeping them separate means a shoulder-surfed PIN doesn't also compromise the account.
-- **Every `Command` is logged**, not just fired-and-forgotten — this becomes your audit trail
-  ("someone tried to trigger my alarm at 3am") and lets a future retry/polling mechanism work
-  if a push gets dropped.
-
-## Next: Week 2
-Week 2 builds the actual .NET MAUI mobile app that registers against `/api/devices/register`
-with a real FCM token, and implements the foreground service + `STREAM_ALARM` audio that
-actually makes noise when a command arrives.
-
-## Reboot persistence & Device Admin (Android)
-
-If the phone is powered off and back on **while the alarm/lock screen is active**, the app
-now brings the lock screen straight back on boot instead of the thief getting a clean,
-unlocked device. This needed three pieces, all on the Android side:
-
-- `BootReceiver` — listens for `BOOT_COMPLETED`, checks a locally-saved "was this device
-  armed?" flag, and re-launches `AlarmActivity` immediately (skipping the grace-period
-  countdown, since the phone was already armed before it powered off).
-- `AntiTheftDeviceAdminReceiver` — a Device Admin (not Device Owner) that lets the app resist
-  casual uninstall/force-stop, and best-effort-pings `POST /api/devices/{id}/security-event`
-  if someone starts removing admin protection.
-- The user must tap **"Enable Device Admin Protection"** on the home screen once — this is a
-  system permission dialog Android requires; it can't be silently auto-enabled.
-
-**⚠️ New DB migration needed** — `Device` gained `LastSecurityEvent` / `LastSecurityEventAt`
-columns. Run this before starting the API:
-```bash
-cd AntiTheftApp.Api
-dotnet ef migrations add AddDeviceSecurityEvents
-dotnet ef database update
-```
-
-**What this does *not* do — read this before you rely on it:**
-- **It does not survive a factory reset.** A factory reset wipes the app itself, so there is
-  nothing left on the device to bring the lock screen back. This is true for every
-  third-party app on Android, not a limitation specific to this project — only Google's
-  built-in Factory Reset Protection (tied to the device's Google account) survives a reset,
-  and that's independent of this app entirely. Tell users to keep a Google account signed in
-  on the device; that's what actually makes a stolen, reset phone unusable to resell.
-- **It does not block a hardware recovery-mode reset.** Device Admin has no power over the
-  bootloader/recovery menu.
-- **OEM battery managers can still kill it.** On Xiaomi (MIUI), Huawei, Oppo, and some other
-  OEM skins, the user also needs to manually allow "Autostart" for the app in that phone's
-  battery/security settings, or `BOOT_COMPLETED` may never fire. No code fix exists for this.
-
-## Automated tests
-
-The API has an xUnit test project: `AntiTheftApp.Api.Tests/`.
-
-- **Unit tests** — `AuthController`, `DevicesController` and `JwtService` (registration, login, invalid
-  credentials, device ownership, Firebase failure handling, JWT contents/expiry).
-- **Integration tests** — boot the real ASP.NET pipeline with `WebApplicationFactory` (validation,
-  JWT auth, routing). PostgreSQL is swapped for an in-memory DB and Firebase for a mock, so no Docker,
-  database or real credentials are needed.
+There are 28 automated tests. Some are unit tests for the controllers and the JWT service. The rest are integration tests that start the real ASP.NET pipeline in memory and walk through flows like register, add a device and trigger an alarm. They use an in-memory database and a mocked Firebase service, so you do not need Docker, Postgres or any credentials to run them:
 
 ```bash
 dotnet test AntiTheftApp.sln
 ```
 
-## CI (GitHub Actions)
+GitHub Actions runs on every push and pull request. It builds and tests the API, builds the portal, and checks that the API's Docker image builds. The workflow is in `.github/workflows/ci.yml`.
 
-`.github/workflows/ci.yml` runs on every push to `main`/`master` and on pull requests:
+## Running it yourself
 
-1. **api** — `dotnet restore`, `build` and `test` (test results uploaded as an artifact)
-2. **portal** — `npm ci` and `npm run build` for the React portal
-3. **docker** — verifies the API Docker image builds
+You will need the .NET 8 SDK, Node.js 20 or newer, a PostgreSQL database, and a Firebase project with Cloud Messaging enabled.
 
-Tests use dummy keys only; no secrets are required in GitHub.
+**1. Database.** Use any Postgres you like. If you want a local one, put a password in a `.env` file next to `docker-compose.yml` (it is gitignored) and start it:
+
+```bash
+echo "POSTGRES_PASSWORD=pick-something-strong" > .env
+docker compose up -d
+```
+
+**2. API settings.** Create `AntiTheftApp.Api/appsettings.json`. It is gitignored, so it never gets committed:
+
+```json
+{
+  "ConnectionStrings": { "DefaultConnection": "Host=...;Port=5432;Database=...;Username=...;Password=..." },
+  "Jwt": {
+    "Key": "a-random-secret-of-at-least-32-characters",
+    "Issuer": "AntiTheftApp",
+    "Audience": "AntiTheftApp.Client",
+    "ExpiryMinutes": "1440"
+  },
+  "Firebase": { "CredentialsPath": "firebase-service-account.json" },
+  "Cors": { "PortalOrigin": "http://localhost:5173" }
+}
+```
+
+You can generate a JWT key with `openssl rand -base64 32`. For Firebase, download a service account key from Project Settings, then Service Accounts, and save it as `AntiTheftApp.Api/firebase-service-account.json` (also gitignored). The `.example` file next to it shows the shape. If you skip this, the API still starts, but sending a command will fail with a clear message.
+
+Any setting can also come from an environment variable instead, for example `Jwt__Key`.
+
+**3. Run the API.**
+
+```bash
+cd AntiTheftApp.Api
+dotnet tool install --global dotnet-ef   # first time only
+dotnet ef database update
+dotnet run
+```
+
+Swagger is available at `/swagger` on the URL printed in the console.
+
+**4. Run the portal.**
+
+```bash
+cd AntiTheftApp-Portal
+cp .env.example .env     # set VITE_API_BASE_URL to your API address
+npm install
+npm run dev
+```
+
+**5. Mobile app.** Open `AntiTheftApp.Mobile` with the .NET MAUI workload installed, add your own Firebase `google-services.json`, set the API address in the app settings, and deploy to an Android phone (Android 8.0 or newer). Push notifications and the alarm need a real device, an emulator will not tell you much.
+
+## Things I would not trust it with (yet)
+
+I would rather be upfront about the limits:
+
+- It does not survive a factory reset or a reset from recovery mode. No third-party app can do that. Google's Factory Reset Protection is the thing that actually helps there, so keep a Google account on the phone.
+- Some phone makers (Xiaomi, Huawei, Oppo and others) kill background apps aggressively. On those phones you may have to allow Autostart and turn off battery optimisation for the app.
+- The Device Admin warning is best effort. If a thief cuts the network first, the message never arrives.
+- Commands have an `Acknowledged` status in the database, but the phone does not report back yet, so it never reaches that state.
+
+## What I want to add next
+
+- Let the phone confirm that it received a command
+- Handle expired Firebase tokens properly
+- Central error handling and structured logging
+- Rate limiting on login
+- Deploy the API and the portal
+
+## Secrets
+
+`appsettings.json`, the Firebase service account file, `google-services.json` and `.env` are all in `.gitignore`. If you fork this, use your own keys and never commit them.
