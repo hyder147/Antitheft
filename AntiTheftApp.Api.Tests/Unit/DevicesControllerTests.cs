@@ -7,6 +7,7 @@ using AntiTheftApp.Api.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace AntiTheftApp.Api.Tests.Unit;
@@ -16,7 +17,7 @@ public class DevicesControllerTests
     private static (DevicesController controller, Mock<IFirebaseService> firebase) Create(AppDbContext db, Guid userId)
     {
         var firebase = new Mock<IFirebaseService>();
-        var controller = new DevicesController(db, firebase.Object).WithUser(userId);
+        var controller = new DevicesController(db, firebase.Object, NullLogger<DevicesController>.Instance).WithUser(userId);
         return (controller, firebase);
     }
 
@@ -124,6 +125,21 @@ public class DevicesControllerTests
         var obj = result.Result.Should().BeOfType<ObjectResult>().Subject;
         obj.StatusCode.Should().Be(502);
         (await db.Commands.SingleAsync()).Status.Should().Be(CommandStatus.Pending);
+    }
+
+    [Fact]
+    public async Task TriggerCommand_WhenFirebaseFails_DoesNotLeakExceptionDetails()
+    {
+        using var db = TestDb.Create();
+        var (user, device) = await SeedUserWithDevice(db);
+        var (controller, firebase) = Create(db, user.Id);
+        firebase.Setup(f => f.SendCommandAsync(It.IsAny<string>(), It.IsAny<CommandType>(), It.IsAny<Guid>()))
+                .ThrowsAsync(new InvalidOperationException("secret-internal-detail"));
+
+        var result = await controller.TriggerCommand(device.Id, new TriggerCommandRequest { Type = CommandType.SoundAlarm });
+
+        var obj = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        obj.Value!.ToString().Should().NotContain("secret-internal-detail");
     }
 
     [Fact]

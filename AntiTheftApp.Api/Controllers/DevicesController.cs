@@ -17,11 +17,13 @@ public class DevicesController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IFirebaseService _firebase;
+    private readonly ILogger<DevicesController> _logger;
 
-    public DevicesController(AppDbContext db, IFirebaseService firebase)
+    public DevicesController(AppDbContext db, IFirebaseService firebase, ILogger<DevicesController> logger)
     {
         _db = db;
         _firebase = firebase;
+        _logger = logger;
     }
 
     private Guid CurrentUserId =>
@@ -89,7 +91,9 @@ public class DevicesController : ControllerBase
         {
             // Common cause: FcmToken is stale (app reinstalled, token rotated).
             // Week 3 will add a proper "re-register token" flow for this.
-            return StatusCode(502, new { message = "Could not deliver command to device.", detail = ex.Message });
+            // Log the real error server-side; never send exception details to the client.
+            _logger.LogError(ex, "Failed to deliver command {CommandId} to device {DeviceId}", command.Id, device.Id);
+            return StatusCode(502, new { message = "Could not deliver command to device." });
         }
 
         return Ok(new CommandResponse
